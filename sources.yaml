@@ -8,6 +8,3 @@ sources:
     branch: main
     path: skills
     mode: exclude
-    exclude:
-      - brand-guidelines
-      - internal-comms
