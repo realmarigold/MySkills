@@ -1,0 +1,13 @@
+# Skill 来源配置
+# mode: exclude — 获取该来源下所有 skill，排除 exclude 列表中的
+# mode: include — 只获取 include 列表中指定的 skill
+
+sources:
+  - name: anthropics
+    repo: anthropics/skills
+    branch: main
+    path: skills
+    mode: exclude
+    exclude:
+      - brand-guidelines
+      - internal-comms

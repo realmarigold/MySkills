@@ -1,0 +1,6 @@
+.git
+skills/
+README.md
+spec.md
+deploy.sh
+.dockerignore

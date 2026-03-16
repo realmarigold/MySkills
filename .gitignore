@@ -1,0 +1,11 @@
+# 同步下来的 skill 文件（由 Cloud Run Job 自动维护）
+# 本地开发时不需要跟踪这些
+# skills/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
