@@ -61,10 +61,10 @@ def load_config(repo_dir: str) -> dict:
 
 def main():
     # 读取环境变量
-    token = os.environ.get("GITHUB_TOKEN")
+    token = os.environ.get("GITHUB_TOKEN", "").strip() or None
     repo_url = os.environ.get(
         "GIT_REPO_URL", "https://github.com/realmarigold/MySkills.git"
-    )
+    ).strip()
     dry_run = os.environ.get("DRY_RUN", "false").lower() == "true"
 
     if not token:
