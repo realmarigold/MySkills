@@ -20,10 +20,23 @@ sources:
 favorites:
   - source: anthropics
     skills:
-      - frontend-design
-      - claude-api
+      - algorithmic-art
+      - brand-guidelines
       - canvas-design
+      - claude-api
+      - doc-coauthoring
+      - docx
+      - frontend-design
+      - internal-comms
+      - mcp-builder
+      - pdf
+      - pptx
+      - skill-creator
+      - slack-gif-creator
+      - theme-factory
+      - web-artifacts-builder
+      - webapp-testing
+      - xlsx
   - source: pua
     skills:
       - pua
-      - yes
