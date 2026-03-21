@@ -22,6 +22,11 @@ sources:
     mode: exclude|include # 过滤模式
     exclude: [string]     # mode=exclude 时，排除的 skill 名
     include: [string]     # mode=include 时，包含的 skill 名
+
+# 常用 skill 精选（可选）
+favorites:
+  - source: string        # 对应 sources 中的 name
+    skills: [string]      # 要收藏的 skill 名
 ```
 
 ## 环境变量
@@ -41,7 +46,8 @@ sources:
    - 根据 mode + include/exclude 过滤
    - 清理本地不再需要的 skill
    - 递归下载每个 skill 的完整目录内容
-4. 检测变更，有变化则 commit & push
+4. 处理 favorites 配置：在 skills/my/ 下创建符号链接指向收藏的 skill
+5. 检测变更，有变化则 commit & push
 
 ## 部署
 

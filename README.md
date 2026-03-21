@@ -35,6 +35,24 @@ sources:
       - skill-b
 ```
 
+### 配置常用 Skill 精选
+
+在 `sources.yaml` 中添加 `favorites` 段，从已有来源中挑选常用 skill，会在 `skills/my/` 下创建符号链接：
+
+```yaml
+favorites:
+  - source: anthropics
+    skills:
+      - frontend-design
+      - claude-api
+  - source: pua
+    skills:
+      - pua
+      - yes
+```
+
+这样 `skills/my/` 下会包含扁平化的符号链接，方便直接引用常用 skill，同时不影响完整同步。
+
 ## 首次部署
 
 ### 1. 创建 GitHub PAT
@@ -77,10 +95,16 @@ python sync/main.py
 ```
 ├── sources.yaml       # skill 来源配置
 ├── skills/            # 同步下来的 skill（自动维护）
-│   └── anthropics/
-│       ├── claude-api/
-│       ├── frontend-design/
-│       └── ...
+│   ├── anthropics/    # 完整同步
+│   │   ├── claude-api/
+│   │   ├── frontend-design/
+│   │   └── ...
+│   ├── pua/           # 完整同步
+│   │   ├── pua/
+│   │   └── ...
+│   └── my/            # 常用 skill 符号链接
+│       ├── claude-api -> ../anthropics/claude-api
+│       └── pua -> ../pua/pua
 ├── sync/              # 同步服务代码
 │   ├── main.py
 │   ├── syncer.py

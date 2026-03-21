@@ -14,3 +14,16 @@ sources:
     branch: main
     path: skills
     mode: exclude
+
+# 常用 skill 精选（从上面的来源中挑选）
+# 会在 skills/my/ 下创建符号链接指向实际 skill 目录
+favorites:
+  - source: anthropics
+    skills:
+      - frontend-design
+      - claude-api
+      - canvas-design
+  - source: pua
+    skills:
+      - pua
+      - yes

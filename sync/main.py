@@ -17,7 +17,7 @@ from datetime import datetime, timezone, timedelta
 
 import yaml
 
-from syncer import sync_source
+from syncer import sync_source, build_favorites
 from git_ops import clone_repo, has_changes, commit_and_push
 
 # 配置日志
@@ -101,7 +101,15 @@ def main():
                     "同步来源 [%s] 失败，跳过继续", source.get("name", "unknown")
                 )
 
-        # 5. 检查变更并推送
+        # 5. 构建 favorites 目录
+        favorites = config.get("favorites", [])
+        if favorites:
+            try:
+                build_favorites(favorites, skills_dir)
+            except Exception:
+                logger.exception("构建 favorites 目录失败")
+
+        # 6. 检查变更并推送
         if has_changes(work_dir):
             tz_cn = timezone(timedelta(hours=8))
             now = datetime.now(tz_cn).strftime("%Y-%m-%d %H:%M:%S CST")
