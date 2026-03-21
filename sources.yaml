@@ -8,3 +8,9 @@ sources:
     branch: main
     path: skills
     mode: exclude
+
+  - name: pua
+    repo: tanweai/pua
+    branch: main
+    path: skills
+    mode: exclude
