@@ -23,35 +23,17 @@ license: MIT
 
 运行 setup 脚本（改编自 Ralph Loop，MIT 协议）：
 ```bash
-bash ~/.claude/plugins/pua/scripts/setup-pua-loop.sh "$ARGUMENTS" --max-iterations 30 --completion-promise "LOOP_DONE"
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/setup-pua-loop.sh" "$ARGUMENTS" --max-iterations 30 --completion-promise "LOOP_DONE"
 ```
 
-这会创建 `.claude/pua-loop.local.md` 状态文件。PUA 的 Stop hook 会检测这个文件并循环。
-
-状态文件会包含用户的任务描述 + 以下 PUA 行为协议：
-
-每次迭代你必须：
-1. 读取项目文件和 git log，了解之前做了什么
-2. 按 PUA 三条红线执行：闭环验证、事实驱动、穷尽一切
-3. 跑 build/test 验证改动
-4. 发现问题就修，修完再验证
-5. 扫描同类问题（冰山法则）
-6. 只有当任务完全完成且验证通过时，输出 <promise>LOOP_DONE</promise>
-
-禁止：
-- 不要调用 AskUserQuestion
-- 不要说"建议用户手动处理"
-- 不要在未验证的情况下声称完成
-- 不要输出 <promise>LOOP_DONE</promise> 除非所有验证都通过了
-LOOPEOF
-```
+这会创建 `.claude/pua-loop.local.md` 状态文件，内含用户任务描述和 PUA 行为协议。PUA 的 Stop hook 检测到此文件后循环运行，每次迭代将文件内容喂回 Claude——**行为协议随每次迭代送达，context compaction 后也不会丢失**。
 
 ### Step 2: 告知用户
 
 输出：
 ```
 ▎ [PUA Loop] 自动迭代模式启动。最多 30 轮，完成后输出 <promise>LOOP_DONE</promise>。
-▎ 取消方式：/cancel-ralph 或删除 .claude/pua-loop.local.md
+▎ 取消方式：/cancel-pua-loop 或删除 .claude/pua-loop.local.md
 ▎ 因为信任所以简单——交给我，不用盯。
 ```
 
@@ -79,6 +61,57 @@ LOOPEOF
 
 否则继续迭代。
 
+## 人工介入信号
+
+Loop 中遇到以下情况，必须使用退出信号，**禁止在 loop 内干等或假装能自行解决**：
+
+### 终止信号：`<loop-abort>`
+任务不可能在 loop 内完成时使用（需要外部账号、不存在的依赖、根本性需求变更等）：
+```
+<loop-abort>任务需要访问生产数据库，当前环境无权限，无法继续</loop-abort>
+```
+效果：删除状态文件，loop 彻底终止。
+
+### 暂停信号：`<loop-pause>`
+运行时发现需要用户补全一项本地配置才能继续时使用：
+```
+<loop-pause>需要在 .env 文件中填写 STRIPE_SECRET_KEY，当前值为空</loop-pause>
+```
+效果：loop 暂停（状态保留），用户补全后可在新会话中自动恢复。
+
+**在输出 `<loop-pause>` 之前，先将当前进度写入 `.claude/pua-loop-context.md`**，包含：
+- 已完成的工作
+- 暂停原因
+- 恢复后应继续执行的步骤
+
+### 禁止的行为
+- 不要使用 AskUserQuestion（loop 模式禁止）
+- 不要输出 `<loop-abort>` 或 `<loop-pause>` 来逃避困难任务——只有真正需要人工介入才用
+- 不要因为遇到障碍就暂停，先穷尽所有自动化手段
+
+## 恢复 Loop
+
+当检测到 `.claude/pua-loop.local.md` 存在且 `active: false` 时，Loop 处于暂停状态：
+
+### Step 1：读取上下文
+```bash
+cat .claude/pua-loop.local.md     # 查看暂停原因和当前迭代
+cat .claude/pua-loop-context.md   # 查看上次保存的进度（如有）
+```
+
+### Step 2：处理人工介入项
+读取暂停原因，使用 AskUserQuestion 确认用户已完成所需操作（如填写 API key）。
+
+### Step 3：恢复状态文件
+```bash
+sed -i 's/^active: false/active: true/' .claude/pua-loop.local.md
+sed -i 's/^session_id: .*/session_id: /' .claude/pua-loop.local.md
+```
+session_id 清空后，hook 在下一次 Stop 时自动绑定当前会话。
+
+### Step 4：继续执行
+按 `.claude/pua-loop-context.md` 中记录的进度继续执行任务。
+
 ## 与 Ralph Loop 的关系
 
-PUA Loop 复用 Ralph Loop 的 Stop hook 机制（`.claude/ralph-loop.local.md` 状态文件格式）。如果用户已安装 Ralph Loop 插件，PUA Loop 直接利用它的 Stop hook 实现循环。如果没安装，PUA Loop 的状态文件格式兼容，用户后续安装 Ralph Loop 后无缝衔接。
+PUA Loop 借鉴了 Ralph Loop 的核心机制（Stop hook 截获退出 + 将 prompt 喂回），但**完全独立实现**：各自有独立的 Stop hook 和状态文件（PUA 用 `.claude/pua-loop.local.md`，Ralph 用 `.claude/ralph-loop.local.md`）。两者可以同时安装，互不干扰。PUA Loop 在此基础上扩展了 PUA 质量压力、迭代压力升级、`<loop-abort>` 和 `<loop-pause>` 信号。
