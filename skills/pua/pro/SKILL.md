@@ -1,6 +1,6 @@
 ---
 name: pro
-description: "PUA Pro extensions: self-evolution tracking, compaction state protection, KPI reporting, leaderboard, and /pua commands. Triggers on: '/pua kpi', '/pua 段位', '/pua 周报', '/pua 述职', '/pua 味道', '/pua 排行榜', 'leaderboard', '排行榜', '自进化', 'evolution', or when user wants PUA platform features like段位/周报/述职/排行榜."
+description: "PUA Pro extensions: self-evolution tracking, compaction state protection, KPI reporting, leaderboard, and /pua:pua commands. Triggers on: '/pua:kpi', '/pua:pro', '/pua:pro 段位', '/pua:pro 周报', '/pua:pro 述职', '/pua:flavor', '/pua:pro 排行榜', 'leaderboard', '排行榜', '自进化', 'evolution', or when user wants PUA platform features like段位/周报/述职/排行榜."
 license: MIT
 ---
 
@@ -40,13 +40,13 @@ SessionStart hook 自动检测 builder-journal.md，存在且 <2h 则注入 [Cal
 | 触发词 | 功能 | 类型 |
 |--------|------|------|
 | `/pua` | 查看所有指令 | 🆓 |
-| `/pua kpi` | 大厂 KPI 报告卡 | 🆓 |
-| `/pua 段位` | 大厂段位 | 🆓 |
-| `/pua 味道` | 切换味道 | 🆓 |
-| `/pua 升级` | 展示套餐 | 🆓 |
-| `/pua 周报` | git log → 大厂周报 | 💎 Pro |
-| `/pua 述职` | P7 述职答辩 | 💎 Pro |
-| `/pua 代码美化` | 大厂语言包装 PR | 💎 Pro |
+| `/pua:kpi` | 大厂 KPI 报告卡 | 🆓 |
+| `/pua:pro` + "段位" | 大厂段位 | 🆓 |
+| `/pua:flavor` | 切换味道 | 🆓 |
+| `/pua:pro` + "升级" | 展示套餐 | 🆓 |
+| `/pua:pro` + "周报" | git log → 大厂周报 | 💎 Pro |
+| `/pua:pro` + "述职" | P7 述职答辩 | 💎 Pro |
+| `/pua:pro` + "代码美化" | 大厂语言包装 PR | 💎 Pro |
 | `/pua 反PUA` | 识别并反驳 PUA | 💎 Pro |
 | `/pua 排行榜` | PUA 排行榜（注册/查看/退出） | 🆓 |
 
@@ -106,14 +106,14 @@ curl -s -X POST https://pua-skill.pages.dev/api/leaderboard \
 
 **Step 2b: 已注册 → 查看排行榜**
 ```bash
-LB_ID=$(python3 -c "import json; print(json.load(open(os.path.expanduser('~/.pua/config.json')))['leaderboard']['id'])" 2>/dev/null)
+LB_ID=$(python3 -c "import os,json; print(json.load(open(os.path.expanduser('~/.pua/config.json'))).get('leaderboard',{}).get('id',''))" 2>/dev/null)
 curl -s "https://pua-skill.pages.dev/api/leaderboard?id=$LB_ID"
 ```
 将返回的 JSON 用方框表格展示 Top 10 + 用户自己的排名和段位。
 
 **Step 3: `/pua 排行榜 退出`**
 ```bash
-LB_ID=$(python3 -c "import json; print(json.load(open(os.path.expanduser('~/.pua/config.json')))['leaderboard']['id'])")
+LB_ID=$(python3 -c "import os,json; print(json.load(open(os.path.expanduser('~/.pua/config.json'))).get('leaderboard',{}).get('id',''))")
 curl -s -X POST https://pua-skill.pages.dev/api/leaderboard \
   -H "Content-Type: application/json" \
   -d "{\"action\":\"quit\",\"id\":\"$LB_ID\"}"

@@ -1,6 +1,6 @@
 ---
-name: loop
-description: "PUA Loop — autonomous iterative development with PUA pressure. Keeps running until task is done, no user interaction needed. Combines Ralph Loop iteration mechanism with PUA quality enforcement. Triggers on: '/pua loop', '/pua:loop', '自动循环', 'loop mode', '一直跑', '自动迭代'."
+name: pua-loop
+description: "PUA Loop — autonomous iterative development with PUA pressure. Keeps running until task is done, no user interaction needed. Combines Ralph Loop iteration mechanism with PUA quality enforcement. Triggers on: '/pua:pua-loop', '自动循环', 'loop mode', '一直跑', '自动迭代'."
 license: MIT
 ---
 
@@ -17,7 +17,7 @@ license: MIT
 
 ## 启动方式
 
-用户输入 `/pua loop "任务描述"` 时，执行以下流程：
+用户输入 `/pua:pua-loop "任务描述"` 时，执行以下流程：
 
 ### Step 1: 启动 PUA Loop
 
