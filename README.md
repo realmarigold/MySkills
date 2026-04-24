@@ -45,10 +45,6 @@ favorites:
     skills:
       - frontend-design
       - claude-api
-  - source: pua
-    skills:
-      - pua
-      - yes
 ```
 
 这样 `skills/my/` 下会包含扁平化的符号链接，方便直接引用常用 skill，同时不影响完整同步。
@@ -99,12 +95,8 @@ python sync/main.py
 │   │   ├── claude-api/
 │   │   ├── frontend-design/
 │   │   └── ...
-│   ├── pua/           # 完整同步
-│   │   ├── pua/
-│   │   └── ...
 │   └── my/            # 常用 skill 符号链接
-│       ├── claude-api -> ../anthropics/claude-api
-│       └── pua -> ../pua/pua
+│       └── claude-api -> ../anthropics/claude-api
 ├── sync/              # 同步服务代码
 │   ├── main.py
 │   ├── syncer.py

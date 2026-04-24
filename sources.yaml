@@ -9,11 +9,6 @@ sources:
     path: skills
     mode: exclude
 
-  - name: pua
-    repo: tanweai/pua
-    branch: main
-    path: skills
-    mode: exclude
 
 # 常用 skill 精选（从上面的来源中挑选）
 # 会在 skills/my/ 下创建符号链接指向实际 skill 目录
@@ -37,6 +32,3 @@ favorites:
       - web-artifacts-builder
       - webapp-testing
       - xlsx
-  - source: pua
-    skills:
-      - pua
