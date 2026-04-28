@@ -9,6 +9,27 @@ sources:
     path: skills
     mode: exclude
 
+  - name: mattpocock-engineering
+    repo: mattpocock/skills
+    branch: main
+    path: skills/engineering
+    mode: include
+    include:
+      - grill-with-docs
+      - tdd
+      - diagnose
+      - to-prd
+      - zoom-out
+      - improve-codebase-architecture
+
+  - name: mattpocock-productivity
+    repo: mattpocock/skills
+    branch: main
+    path: skills/productivity
+    mode: include
+    include:
+      - grill-me
+
 
 # 常用 skill 精选（从上面的来源中挑选）
 # 会在 skills/my/ 下创建符号链接指向实际 skill 目录
@@ -30,3 +51,14 @@ favorites:
       - web-artifacts-builder
       - webapp-testing
       - xlsx
+  - source: mattpocock-engineering
+    skills:
+      - grill-with-docs
+      - tdd
+      - diagnose
+      - to-prd
+      - zoom-out
+      - improve-codebase-architecture
+  - source: mattpocock-productivity
+    skills:
+      - grill-me
