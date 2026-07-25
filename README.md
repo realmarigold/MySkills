@@ -92,26 +92,35 @@ python sync/main.py
 
 ### 安装插件
 
-运行一键安装脚本（会在 `~/.gemini/config/plugins/myskills` 创建符号链接）：
-
+**macOS / Linux (Bash):**
 ```bash
 chmod +x install.sh
 ./install.sh
 ```
 
+**Windows (PowerShell):**
+```powershell
+.\install.ps1
+```
+
 ### 卸载插件
 
-如果需要取消插件关联，运行：
-
+**macOS / Linux (Bash):**
 ```bash
 ./install.sh --uninstall
+```
+
+**Windows (PowerShell):**
+```powershell
+.\install.ps1 -Uninstall
 ```
 
 ## 目录结构
 
 ```
 ├── plugin.json        # Antigravity 插件配置文件
-├── install.sh         # Antigravity 插件安装/卸载脚本
+├── install.sh         # Antigravity 插件安装/卸载脚本 (macOS/Linux)
+├── install.ps1        # Antigravity 插件安装/卸载脚本 (Windows PowerShell)
 ├── sources.yaml       # skill 来源配置
 ├── skills/            # 同步下来的 skill（自动维护）
 │   ├── anthropics/    # 完整同步
