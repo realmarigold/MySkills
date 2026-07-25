@@ -185,9 +185,17 @@ def sync_source(
 
 def build_favorites(favorites: list[dict], skills_dir: str) -> None:
     """
-    在 skills/my/ 下创建符号链接指向收藏的 skill (支持 Windows/无特权环境自动复制降级)
+    在 skills/ 根目录下创建符号链接指向收藏的 skill (支持 Windows/无特权环境自动复制降级)
+    平铺在 skills/ 根层级，以便 Antigravity 插件自动发现机制 (第 1 层级) 识别
     """
-    my_dir = os.path.join(skills_dir, "my")
+    # 清理旧版 skills/my 目录（如果存在）
+    legacy_my_dir = os.path.join(skills_dir, "my")
+    if os.path.exists(legacy_my_dir):
+        if os.path.islink(legacy_my_dir):
+            os.remove(legacy_my_dir)
+        else:
+            shutil.rmtree(legacy_my_dir)
+        logger.info("Favorites: 已清理旧版 skills/my 目录")
 
     wanted_links: dict[str, str] = {}
     for fav in favorites:
@@ -201,7 +209,7 @@ def build_favorites(favorites: list[dict], skills_dir: str) -> None:
                     skill_name,
                 )
                 continue
-            relative_target = os.path.join("..", source_name, skill_name)
+            relative_target = os.path.join(source_name, skill_name)
             if skill_name in wanted_links:
                 logger.warning(
                     "Favorites: skill 名称冲突 '%s'，已有来源将被覆盖",
@@ -210,26 +218,38 @@ def build_favorites(favorites: list[dict], skills_dir: str) -> None:
             wanted_links[skill_name] = relative_target
 
     if not wanted_links:
-        if os.path.isdir(my_dir):
-            shutil.rmtree(my_dir)
-            logger.info("Favorites: 无配置，已清理 my/ 目录")
+        logger.info("Favorites: 无配置常用 skill")
         return
 
-    os.makedirs(my_dir, exist_ok=True)
+    # 清理 skills_dir 下不再在 wanted_links 中且属于旧 favorite 链接/目录的项
+    # 注意避免误删 source 来源目录
+    source_dirs = {
+        d for d in os.listdir(skills_dir)
+        if os.path.isdir(os.path.join(skills_dir, d))
+        and not os.path.islink(os.path.join(skills_dir, d))
+        and any(
+            os.path.exists(os.path.join(skills_dir, d, s, "SKILL.md"))
+            for s in os.listdir(os.path.join(skills_dir, d))
+            if os.path.isdir(os.path.join(skills_dir, d, s))
+        )
+    }
 
-    if os.path.isdir(my_dir):
-        for existing in os.listdir(my_dir):
-            existing_path = os.path.join(my_dir, existing)
-            if existing not in wanted_links:
-                if os.path.islink(existing_path):
-                    os.remove(existing_path)
-                    logger.info("Favorites: 移除旧链接 %s", existing)
-                elif os.path.isdir(existing_path):
+    for existing in os.listdir(skills_dir):
+        if existing in source_dirs:
+            continue
+        existing_path = os.path.join(skills_dir, existing)
+        if existing not in wanted_links:
+            if os.path.islink(existing_path):
+                os.remove(existing_path)
+                logger.info("Favorites: 移除旧链接 %s", existing)
+            elif os.path.isdir(existing_path):
+                # 仅清理包含 SKILL.md 的平铺副本
+                if os.path.exists(os.path.join(existing_path, "SKILL.md")):
                     shutil.rmtree(existing_path)
                     logger.info("Favorites: 移除旧目录 %s", existing)
 
     for skill_name, relative_target in wanted_links.items():
-        link_path = os.path.join(my_dir, skill_name)
+        link_path = os.path.join(skills_dir, skill_name)
         if os.path.islink(link_path):
             current_target = os.readlink(link_path)
             if current_target == relative_target:
@@ -238,7 +258,7 @@ def build_favorites(favorites: list[dict], skills_dir: str) -> None:
         elif os.path.exists(link_path):
             shutil.rmtree(link_path)
 
-        source_name = relative_target.split(os.sep)[1]
+        source_name = relative_target.split(os.sep)[0]
         target_abs_path = os.path.join(skills_dir, source_name, skill_name)
 
         try:
@@ -254,4 +274,5 @@ def build_favorites(favorites: list[dict], skills_dir: str) -> None:
             )
 
     logger.info("Favorites: 共 %d 个常用 skill ✓", len(wanted_links))
+
 

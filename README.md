@@ -7,8 +7,7 @@
 1. Cloud Scheduler 每天 UTC 2:00（北京时间 10:00）触发 Cloud Run Job。
 2. Job 克隆本仓库，读取 `sources.yaml` 配置。
 3. 通过 GitHub API 结合仓库归档 (Tarball) 一次性高效下载 skill 目录文件，防范 API 请求限流 (429)，并具备指数退避重试机制。
-4. 在 `skills/my/` 中自动维护常用 Skill 的快捷方式（在 Windows/非特权模式下支持软链接失败自动回退为目录复制）。
-5. 如果有变更则自动 commit & push。
+4. 在 `skills/` 根目录下自动维护常用 Skill 的快捷方式（平铺在第 1 层级，以便 Antigravity 插件自动发现机制识别）。
 
 ## 配置 Skill 来源
 
@@ -38,7 +37,7 @@ sources:
 
 ### 配置常用 Skill 精选
 
-在 `sources.yaml` 中添加 `favorites` 段，从已有来源中挑选常用 skill，会在 `skills/my/` 下创建符号链接：
+在 `sources.yaml` 中添加 `favorites` 段，从已有来源中挑选常用 skill，会在 `skills/` 根目录下创建符号链接：
 
 ```yaml
 favorites:
@@ -48,7 +47,7 @@ favorites:
       - claude-api
 ```
 
-这样 `skills/my/` 下会包含扁平化的符号链接，方便直接引用常用 skill，同时不影响完整同步。
+这样 `skills/` 根目录下会包含平铺的符号链接，方便 Antigravity 自动识别，同时不影响完整同步。
 
 ## 首次部署
 
@@ -132,12 +131,12 @@ chmod +x install.sh
 ├── install.ps1        # Antigravity 插件安装/卸载脚本 (Windows PowerShell)
 ├── sources.yaml       # skill 来源配置
 ├── skills/            # 同步下来的 skill（自动维护）
-│   ├── anthropics/    # 完整同步
+│   ├── anthropics/    # 完整同步按来源分类
 │   │   ├── claude-api/
 │   │   ├── frontend-design/
 │   │   └── ...
-│   └── my/            # 常用 skill 符号链接/快捷副本
-│       └── claude-api -> ../anthropics/claude-api
+│   ├── claude-api -> anthropics/claude-api # 常用 skill 符号链接 (根层级以便 Antigravity 插件自动识别)
+│   └── pptx -> anthropics/pptx
 ├── sync/              # 同步服务代码
 │   ├── main.py
 │   ├── syncer.py

@@ -10,7 +10,7 @@
 - **触发方式**: Cloud Scheduler 每天 UTC 2:00
 - **语言**: Python 3.12
 - **容器**: python:3.12-slim + git
-- **插件标准**: Antigravity Plugin 规范（插件标识 `myskills`，安装目标 `~/.gemini/config/plugins/myskills`）
+- **插件标准**: Antigravity Plugin 规范（插件标识 `myskills`，安装目标 `~/.gemini/config/plugins/myskills`，配置 `skills.json` 指定多源 Skill 路径）
 
 ## 配置格式 (sources.yaml)
 
@@ -48,7 +48,7 @@ favorites:
    - 根据 mode + include/exclude 过滤
    - 清理本地不再需要的 skill
    - 递归下载每个 skill 的完整目录内容
-4. 处理 favorites 配置：在 skills/my/ 下创建符号链接指向收藏的 skill
+4. 处理 favorites 配置：在 skills/ 根目录下创建符号链接指向收藏的 skill（满足 Antigravity 插件第 1 层级扫描规范）
 5. 检测变更，有变化则 commit & push
 
 ## 部署

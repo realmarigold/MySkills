@@ -80,8 +80,9 @@ class TestSyncer(unittest.TestCase):
 
             build_favorites(favorites, tmpdir)
 
-            my_skill_path = os.path.join(tmpdir, "my", "claude-api")
+            my_skill_path = os.path.join(tmpdir, "claude-api")
             self.assertTrue(os.path.exists(my_skill_path))
+            self.assertTrue(os.path.isfile(os.path.join(my_skill_path, "SKILL.md")))
 
     def test_build_favorites_fallback(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -97,7 +98,7 @@ class TestSyncer(unittest.TestCase):
             with patch("os.symlink", side_effect=PermissionError("Symlink not allowed")):
                 build_favorites(favorites, tmpdir)
 
-            my_skill_path = os.path.join(tmpdir, "my", "claude-api")
+            my_skill_path = os.path.join(tmpdir, "claude-api")
             self.assertTrue(os.path.isdir(my_skill_path))
             self.assertFalse(os.path.islink(my_skill_path))
             with open(os.path.join(my_skill_path, "SKILL.md"), "r") as f:
