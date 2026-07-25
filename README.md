@@ -4,10 +4,11 @@
 
 ## 工作原理
 
-1. Cloud Scheduler 每天 UTC 2:00（北京时间 10:00）触发 Cloud Run Job
-2. Job 克隆本仓库，读取 `sources.yaml` 配置
-3. 通过 GitHub API 从各来源下载 skill 文件到 `skills/` 目录
-4. 如果有变更则自动 commit & push
+1. Cloud Scheduler 每天 UTC 2:00（北京时间 10:00）触发 Cloud Run Job。
+2. Job 克隆本仓库，读取 `sources.yaml` 配置。
+3. 通过 GitHub API 结合仓库归档 (Tarball) 一次性高效下载 skill 目录文件，防范 API 请求限流 (429)，并具备指数退避重试机制。
+4. 在 `skills/my/` 中自动维护常用 Skill 的快捷方式（在 Windows/非特权模式下支持软链接失败自动回退为目录复制）。
+5. 如果有变更则自动 commit & push。
 
 ## 配置 Skill 来源
 
@@ -77,10 +78,16 @@ chmod +x deploy.sh
 gcloud run jobs execute skill-sync-job --region us-west1
 ```
 
-## 本地测试
+## 本地测试与单元测试
 
 ```bash
-pip install -r sync/requirements.txt
+# 1. 安装依赖
+pip install -r sync/requirements.txt pytest
+
+# 2. 运行单元测试
+python3 -m unittest discover -s tests -v
+
+# 3. 运行本地同步测试 (Dry Run 模式)
 export GITHUB_TOKEN=ghp_your_token
 export DRY_RUN=true
 python sync/main.py
@@ -118,6 +125,8 @@ chmod +x install.sh
 ## 目录结构
 
 ```
+├── .github/workflows/ # GitHub Actions CI 配置
+│   └── ci.yml
 ├── plugin.json        # Antigravity 插件配置文件
 ├── install.sh         # Antigravity 插件安装/卸载脚本 (macOS/Linux)
 ├── install.ps1        # Antigravity 插件安装/卸载脚本 (Windows PowerShell)
@@ -127,15 +136,18 @@ chmod +x install.sh
 │   │   ├── claude-api/
 │   │   ├── frontend-design/
 │   │   └── ...
-│   └── my/            # 常用 skill 符号链接
+│   └── my/            # 常用 skill 符号链接/快捷副本
 │       └── claude-api -> ../anthropics/claude-api
 ├── sync/              # 同步服务代码
 │   ├── main.py
 │   ├── syncer.py
 │   ├── git_ops.py
 │   └── requirements.txt
+├── tests/             # 自动化单元测试套件
+│   └── test_syncer.py
 ├── Dockerfile
 ├── deploy.sh
 └── spec.md
 ```
+
 
