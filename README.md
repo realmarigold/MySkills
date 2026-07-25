@@ -86,9 +86,32 @@ export DRY_RUN=true
 python sync/main.py
 ```
 
+## 作为 Antigravity 插件安装使用
+
+本仓库符合 Antigravity 插件规范（包含了 `plugin.json`）。你可以将其安装为 Antigravity 的本地插件，使 Antigravity 能自动识别并加载 `skills/` 目录下的所有 Agent Skill：
+
+### 安装插件
+
+运行一键安装脚本（会在 `~/.gemini/config/plugins/myskills` 创建符号链接）：
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+### 卸载插件
+
+如果需要取消插件关联，运行：
+
+```bash
+./install.sh --uninstall
+```
+
 ## 目录结构
 
 ```
+├── plugin.json        # Antigravity 插件配置文件
+├── install.sh         # Antigravity 插件安装/卸载脚本
 ├── sources.yaml       # skill 来源配置
 ├── skills/            # 同步下来的 skill（自动维护）
 │   ├── anthropics/    # 完整同步
@@ -106,3 +129,4 @@ python sync/main.py
 ├── deploy.sh
 └── spec.md
 ```
+

@@ -10,8 +10,10 @@
 - **触发方式**: Cloud Scheduler 每天 UTC 2:00
 - **语言**: Python 3.12
 - **容器**: python:3.12-slim + git
+- **插件标准**: Antigravity Plugin 规范（插件标识 `myskills`，安装目标 `~/.gemini/config/plugins/myskills`）
 
 ## 配置格式 (sources.yaml)
+
 
 ```yaml
 sources:
@@ -65,3 +67,10 @@ skills/
         ├── SKILL.md
         └── [其他资源文件]
 ```
+
+## Antigravity 插件集成规范
+
+- **Plugin 配置文件**: `plugin.json`
+- **安装位置**: `~/.gemini/config/plugins/myskills` （通过 `install.sh` 建立符号链接）
+- **技能自动发现机制**: Antigravity 会递归扫描该插件路径下包含 `SKILL.md` 的所有技能子目录并自动加载。
+

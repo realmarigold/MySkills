@@ -1,0 +1,10 @@
+{
+  "name": "myskills",
+  "version": "1.0.0",
+  "description": "Personalized agent skills collection auto-synced for Antigravity.",
+  "author": {
+    "name": "realmarigold"
+  },
+  "repository": "https://github.com/realmarigold/MySkills",
+  "license": "MIT"
+}
