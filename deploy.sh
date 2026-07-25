@@ -63,8 +63,9 @@ gcloud run jobs deploy "${JOB_NAME}" \
 # ============================================================
 echo ">>> 配置 Cloud Scheduler..."
 
-# 获取 Cloud Run Job 的 URI
-JOB_URI=$(gcloud run jobs describe "${JOB_NAME}" --region="${REGION}" --format="value(metadata.annotations.'run.googleapis.com/urls')" 2>/dev/null || echo "")
+# 获取项目的默认 Compute Service Account
+PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
+SA_EMAIL=$(gcloud iam service-accounts list --filter="email~compute@developer.gserviceaccount.com" --format="value(email)" 2>/dev/null | head -n 1 || echo "${PROJECT_NUMBER}-compute@developer.gserviceaccount.com")
 
 # 使用 gcloud scheduler 创建/更新
 gcloud scheduler jobs describe "${JOB_NAME}-scheduler" \
@@ -75,14 +76,15 @@ gcloud scheduler jobs update http "${JOB_NAME}-scheduler" \
     --time-zone="${TIMEZONE}" \
     --uri="https://${REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/${JOB_NAME}:run" \
     --http-method=POST \
-    --oauth-service-account-email="${PROJECT_ID}@appspot.gserviceaccount.com" || \
+    --oauth-service-account-email="${SA_EMAIL}" || \
 gcloud scheduler jobs create http "${JOB_NAME}-scheduler" \
     --location="${REGION}" \
     --schedule="${SCHEDULE}" \
     --time-zone="${TIMEZONE}" \
     --uri="https://${REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/${JOB_NAME}:run" \
     --http-method=POST \
-    --oauth-service-account-email="${PROJECT_ID}@appspot.gserviceaccount.com"
+    --oauth-service-account-email="${SA_EMAIL}"
+
 
 echo ""
 echo "============================================================"
