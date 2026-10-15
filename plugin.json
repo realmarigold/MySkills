@@ -1,11 +1,11 @@
 {
   "name": "myskills",
   "displayName": "MySkills",
-  "version": "2.0.0",
-  "description": "Curated collection of engineering, architecture, productivity, document, and frontend design skills auto-synced for Antigravity.",
+  "version": "2.1.0",
+  "description": "Curated collection of core engineering (TDD, bug diagnosis), frontend design, MCP building, web testing, and office document skills auto-synced for Antigravity.",
   "logo": "assets/logo.svg",
   "suggestedPrompts": [
-    "Use grill-me to interview me and stress-test my design plan before writing code",
+    "Use diagnosing-bugs to build a tight reproduction loop and root-cause this issue",
     "Design and implement a polished web interface following frontend-design best practices",
     "Implement this requirement step-by-step using strict red-green-refactor TDD"
   ]

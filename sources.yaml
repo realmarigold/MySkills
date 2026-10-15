@@ -2,20 +2,25 @@
 # 所有过滤后保留的 skill 将直接平铺同步至 skills/<skill-name>/ 目录，
 # 以 100% 符合 Antigravity 2.0 插件一级目录自动发现规范 (skills/<skill-name>/SKILL.md)。
 #
+# mode: include — 只获取 include 列表中指定的精选高价值 skill
 # mode: exclude — 获取该来源下所有 skill，排除 exclude 列表中的项
-# mode: include — 只获取 include 列表中指定的 skill
 
 sources:
   - name: anthropics
     repo: anthropics/skills
     branch: main
     path: skills
-    mode: exclude
-    exclude:
-      - brand-guidelines
-      - internal-comms
-      - academy-guide
-      - discernment-nudge
+    mode: include
+    include:
+      - doc-coauthoring
+      - docx
+      - frontend-design
+      - mcp-builder
+      - pdf
+      - pptx
+      - skill-creator
+      - webapp-testing
+      - xlsx
 
   - name: mattpocock-engineering
     repo: mattpocock/skills
@@ -23,17 +28,5 @@ sources:
     path: skills/engineering
     mode: include
     include:
-      - grill-with-docs
-      - tdd
       - diagnosing-bugs
-      - to-spec
-      - wayfinder
-      - improve-codebase-architecture
-
-  - name: mattpocock-productivity
-    repo: mattpocock/skills
-    branch: main
-    path: skills/productivity
-    mode: include
-    include:
-      - grill-me
+      - tdd
