@@ -1,5 +1,5 @@
-# Skill 来源配置
-# mode: exclude — 获取该来源下所有 skill，排除 exclude 列表中的
+# Skill 来源默认配置（当仓库中无 sources.yaml 时回退使用）
+# mode: exclude — 获取该来源下所有 skill，排除 exclude 列表中的项
 # mode: include — 只获取 include 列表中指定的 skill
 
 sources:
@@ -11,11 +11,26 @@ sources:
     exclude:
       - brand-guidelines
       - internal-comms
+      - academy-guide
+      - discernment-nudge
 
-# 常用 skill 精选（从上面的来源中挑选）
-# 会在 skills/my/ 下创建符号链接指向实际 skill 目录
-# favorites:
-#   - source: anthropics
-#     skills:
-#       - frontend-design
-#       - claude-api
+  - name: mattpocock-engineering
+    repo: mattpocock/skills
+    branch: main
+    path: skills/engineering
+    mode: include
+    include:
+      - grill-with-docs
+      - tdd
+      - diagnosing-bugs
+      - to-spec
+      - wayfinder
+      - improve-codebase-architecture
+
+  - name: mattpocock-productivity
+    repo: mattpocock/skills
+    branch: main
+    path: skills/productivity
+    mode: include
+    include:
+      - grill-me

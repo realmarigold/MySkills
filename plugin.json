@@ -1,10 +1,12 @@
 {
   "name": "myskills",
-  "version": "1.0.0",
-  "description": "Personalized agent skills collection auto-synced for Antigravity.",
-  "author": {
-    "name": "realmarigold"
-  },
-  "repository": "https://github.com/realmarigold/MySkills",
-  "license": "MIT"
+  "displayName": "MySkills",
+  "version": "2.0.0",
+  "description": "Curated collection of engineering, architecture, productivity, document, and frontend design skills auto-synced for Antigravity.",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "Use grill-me to interview me and stress-test my design plan before writing code",
+    "Design and implement a polished web interface following frontend-design best practices",
+    "Implement this requirement step-by-step using strict red-green-refactor TDD"
+  ]
 }

@@ -1,5 +1,8 @@
 # Skill 来源配置
-# mode: exclude — 获取该来源下所有 skill，排除 exclude 列表中的
+# 所有过滤后保留的 skill 将直接平铺同步至 skills/<skill-name>/ 目录，
+# 以 100% 符合 Antigravity 2.0 插件一级目录自动发现规范 (skills/<skill-name>/SKILL.md)。
+#
+# mode: exclude — 获取该来源下所有 skill，排除 exclude 列表中的项
 # mode: include — 只获取 include 列表中指定的 skill
 
 sources:
@@ -8,6 +11,11 @@ sources:
     branch: main
     path: skills
     mode: exclude
+    exclude:
+      - brand-guidelines
+      - internal-comms
+      - academy-guide
+      - discernment-nudge
 
   - name: mattpocock-engineering
     repo: mattpocock/skills
@@ -17,9 +25,9 @@ sources:
     include:
       - grill-with-docs
       - tdd
-      - diagnose
-      - to-prd
-      - zoom-out
+      - diagnosing-bugs
+      - to-spec
+      - wayfinder
       - improve-codebase-architecture
 
   - name: mattpocock-productivity
@@ -28,37 +36,4 @@ sources:
     path: skills/productivity
     mode: include
     include:
-      - grill-me
-
-
-# 常用 skill 精选（从上面的来源中挑选）
-# 会在 skills/my/ 下创建符号链接指向实际 skill 目录
-favorites:
-  - source: anthropics
-    skills:
-      - algorithmic-art
-      - canvas-design
-      - claude-api
-      - doc-coauthoring
-      - docx
-      - frontend-design
-      - mcp-builder
-      - pdf
-      - pptx
-      - skill-creator
-      - slack-gif-creator
-      - theme-factory
-      - web-artifacts-builder
-      - webapp-testing
-      - xlsx
-  - source: mattpocock-engineering
-    skills:
-      - grill-with-docs
-      - tdd
-      - diagnose
-      - to-prd
-      - zoom-out
-      - improve-codebase-architecture
-  - source: mattpocock-productivity
-    skills:
       - grill-me

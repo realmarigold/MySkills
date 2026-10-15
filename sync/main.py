@@ -1,13 +1,15 @@
 """
 main.py - Skill Sync 入口
-从多个 GitHub 来源同步 Agent Skill 到目标 Git 仓库
+从多个 GitHub 来源同步 Agent Skill 到目标 Git 仓库（或本地工作区）
 
 环境变量:
     GITHUB_TOKEN    - GitHub PAT (用于 API 访问和 git push)
     GIT_REPO_URL    - 目标仓库 URL (默认: https://github.com/realmarigold/MySkills.git)
     DRY_RUN         - 设为 "true" 时不执行 git push
+    LOCAL_SYNC      - 设为 "true" (或传入 --local) 时直接同步当前本地仓库目录
 """
 
+import argparse
 import os
 import sys
 import shutil
@@ -17,7 +19,7 @@ from datetime import datetime, timezone, timedelta
 
 import yaml
 
-from syncer import sync_source, build_favorites
+from syncer import sync_source, cleanup_skills_dir
 from git_ops import clone_repo, has_changes, commit_and_push
 
 # 配置日志
@@ -41,8 +43,7 @@ def load_config(repo_dir: str) -> dict:
         fallback = os.path.join(os.path.dirname(__file__), "sources.default.yaml")
         if os.path.exists(fallback):
             logger.info("仓库中无 sources.yaml，使用内置默认配置")
-            import shutil as _shutil
-            _shutil.copy2(fallback, config_path)
+            shutil.copy2(fallback, config_path)
         else:
             logger.error("配置文件不存在: %s", config_path)
             sys.exit(1)
@@ -59,19 +60,79 @@ def load_config(repo_dir: str) -> dict:
     return config
 
 
+def run_sync_in_dir(repo_dir: str, token: str | None = None) -> set[str]:
+    """
+    在指定仓库目录内执行全量同步与清理
+    返回本次激活的全部 skill 名称集合
+    """
+    config = load_config(repo_dir)
+    sources = config["sources"]
+
+    skills_dir = os.path.join(repo_dir, "skills")
+    os.makedirs(skills_dir, exist_ok=True)
+
+    active_skills: set[str] = set()
+    all_succeeded = True
+
+    for source in sources:
+        try:
+            synced = sync_source(source, skills_dir, token)
+            for s in synced:
+                if s in active_skills:
+                    logger.warning("检测到跨来源同名 skill '%s'，后同步的来源将覆盖前者", s)
+                active_skills.add(s)
+        except Exception:
+            all_succeeded = False
+            logger.exception(
+                "同步来源 [%s] 失败，跳过继续", source.get("name", "unknown")
+            )
+
+    if all_succeeded:
+        cleanup_skills_dir(skills_dir, active_skills)
+    else:
+        logger.warning("部分来源同步失败，跳过全量过期清理以避免误删现有 skill")
+
+    # 清理旧版遗留的根目录 skills.json（如果存在）
+    legacy_skills_json = os.path.join(repo_dir, "skills.json")
+    if os.path.isfile(legacy_skills_json):
+        os.remove(legacy_skills_json)
+        logger.info("已清理废弃的根目录 skills.json")
+
+    logger.info("当前生效 skill 总数: %d", len(active_skills))
+    return active_skills
+
+
 def main():
-    # 读取环境变量
+    parser = argparse.ArgumentParser(description="MySkills Sync Runner")
+    parser.add_argument(
+        "--local",
+        action="store_true",
+        help="直接在当前本地仓库目录执行同步，不进行临时目录 clone 或远端 push",
+    )
+    args = parser.parse_args()
+
     token = os.environ.get("GITHUB_TOKEN", "").strip() or None
     repo_url = os.environ.get(
         "GIT_REPO_URL", "https://github.com/realmarigold/MySkills.git"
     ).strip()
     dry_run = os.environ.get("DRY_RUN", "false").lower() == "true"
+    local_mode = args.local or os.environ.get("LOCAL_SYNC", "false").lower() == "true"
 
-    if not token:
+    if not token and not local_mode:
         logger.warning("未设置 GITHUB_TOKEN，API 请求可能受限，且无法 push。")
 
     logger.info("=" * 60)
     logger.info("Skill Sync 开始运行")
+    if local_mode:
+        local_repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        logger.info("运行模式: 本地仓库直连 (%s)", local_repo_dir)
+        logger.info("=" * 60)
+        run_sync_in_dir(local_repo_dir, token)
+        logger.info("=" * 60)
+        logger.info("本地 Skill Sync 运行结束 ✓")
+        logger.info("=" * 60)
+        return
+
     logger.info("目标仓库: %s", repo_url)
     logger.info("Dry Run: %s", dry_run)
     logger.info("=" * 60)
@@ -84,32 +145,10 @@ def main():
         # 1. Clone 目标仓库
         clone_repo(repo_url, work_dir, token)
 
-        # 2. 加载配置
-        config = load_config(work_dir)
-        sources = config["sources"]
+        # 2. 执行同步与清理
+        run_sync_in_dir(work_dir, token)
 
-        # 3. skills 目录
-        skills_dir = os.path.join(work_dir, "skills")
-        os.makedirs(skills_dir, exist_ok=True)
-
-        # 4. 逐个来源同步
-        for source in sources:
-            try:
-                sync_source(source, skills_dir, token)
-            except Exception:
-                logger.exception(
-                    "同步来源 [%s] 失败，跳过继续", source.get("name", "unknown")
-                )
-
-        # 5. 构建 favorites 目录
-        favorites = config.get("favorites", [])
-        if favorites:
-            try:
-                build_favorites(favorites, skills_dir)
-            except Exception:
-                logger.exception("构建 favorites 目录失败")
-
-        # 6. 检查变更并推送
+        # 3. 检查变更并推送
         if has_changes(work_dir):
             tz_cn = timezone(timedelta(hours=8))
             now = datetime.now(tz_cn).strftime("%Y-%m-%d %H:%M:%S CST")

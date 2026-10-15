@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="none">
+  <defs>
+    <linearGradient id="bg-grad" x1="16" y1="16" x2="112" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4F46E5"/>
+      <stop offset="50%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+    <linearGradient id="accent-grad" x1="36" y1="32" x2="96" y2="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E0E7FF"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square badge with ~12% margin (16px to 112px) -->
+  <rect x="16" y="16" width="96" height="96" rx="24" fill="url(#bg-grad)"/>
+  <rect x="18" y="18" width="92" height="92" rx="22" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="2"/>
+  <!-- Modular skill blocks + spark icon -->
+  <rect x="34" y="36" width="24" height="24" rx="6" fill="url(#accent-grad)"/>
+  <rect x="34" y="68" width="24" height="24" rx="6" fill="url(#accent-grad)" fill-opacity="0.85"/>
+  <rect x="66" y="68" width="24" height="24" rx="6" fill="url(#accent-grad)" fill-opacity="0.85"/>
+  <!-- 4-point AI star in top-right quadrant -->
+  <path d="M78 30C78 38.8366 85.1634 46 94 46C85.1634 46 78 53.1634 78 62C78 53.1634 70.8366 46 62 46C70.8366 46 78 38.8366 78 30Z" fill="#FFFFFF"/>
+</svg>

@@ -1,13 +1,13 @@
 # MySkills
 
-自动同步 Agent Skill 到本仓库，部署为 Cloud Run Job，由 Cloud Scheduler 每天触发。
+自动从多个 GitHub 来源同步精选 Agent Skill 到本仓库，完全遵循 **Antigravity 2.0 插件规范**，并支持部署为 Google Cloud Run Job（由 Cloud Scheduler 每天自动触发）。
 
 ## 工作原理
 
 1. Cloud Scheduler 每天 UTC 2:00（北京时间 10:00）触发 Cloud Run Job。
 2. Job 克隆本仓库，读取 `sources.yaml` 配置。
-3. 通过 GitHub API 结合仓库归档 (Tarball) 一次性高效下载 skill 目录文件，防范 API 请求限流 (429)，并具备指数退避重试机制。
-4. 在 `skills/` 根目录下自动维护常用 Skill 的快捷方式（平铺在第 1 层级，以便 Antigravity 插件自动发现机制识别）。
+3. 通过 GitHub API 结合仓库归档 (Tarball) 一次性高效下载所需 skill 文件，防范 API 请求限流 (429) 并具备指数退避重试机制。
+4. **纯净平铺结构**：所有过滤后的有效 Skill 直接以真实目录形式解压到 `skills/<skill-name>/`，100% 符合 Antigravity 2.0 插件一级目录自动发现规范（`skills/<skill-name>/SKILL.md`），彻底消除 Git 符号链接在 Windows 下退化为普通文件导致无法加载的问题。
 
 ## 配置 Skill 来源
 
@@ -15,7 +15,7 @@
 
 ```yaml
 sources:
-  # 获取全部，排除指定的
+  # mode: exclude — 获取该来源下全部 skill，排除指定项
   - name: anthropics
     repo: anthropics/skills
     branch: main
@@ -23,33 +23,77 @@ sources:
     mode: exclude
     exclude:
       - brand-guidelines
+      - internal-comms
+      - academy-guide
+      - discernment-nudge
 
-  # 只获取指定的
-  - name: another-source
-    repo: some-org/some-repo
+  # mode: include — 仅获取 include 列表中指定的 skill
+  - name: mattpocock-engineering
+    repo: mattpocock/skills
     branch: main
-    path: skills
+    path: skills/engineering
     mode: include
     include:
-      - skill-a
-      - skill-b
+      - grill-with-docs
+      - tdd
+      - diagnosing-bugs
+      - to-spec
+      - wayfinder
+      - improve-codebase-architecture
 ```
 
-### 配置常用 Skill 精选
+## 作为 Antigravity 2.0 插件安装使用
 
-在 `sources.yaml` 中添加 `favorites` 段，从已有来源中挑选常用 skill，会在 `skills/` 根目录下创建符号链接：
+本仓库严格遵循 Antigravity 2.0 插件规范（包含标准 `plugin.json`、`assets/logo.svg` 以及平铺的 `skills/<skill-name>/SKILL.md`）。
 
-```yaml
-favorites:
-  - source: anthropics
-    skills:
-      - frontend-design
-      - claude-api
+### 安装 / 更新插件
+
+> Antigravity 2.0 底层 Language Server (Go `os.ReadDir`) 扫描 `~/.gemini/config/plugins/` 时要求插件目录必须为**真实文件夹**（会跳过顶层 Symlink / Junction）。安装脚本会将纯净的插件包（`plugin.json`、`assets/`、`skills/`）直接安装至 `~/.gemini/config/plugins/myskills` 并立即生效。
+
+**Windows (PowerShell):**
+```powershell
+.\install.ps1
 ```
 
-这样 `skills/` 根目录下会包含平铺的符号链接，方便 Antigravity 自动识别，同时不影响完整同步。
+**macOS / Linux (Bash):**
+```bash
+chmod +x install.sh
+./install.sh
+```
 
-## 首次部署
+> 安装完成后无需重启即可在 Antigravity 中访问 `customization://myskills` 查看与管理插件。
+
+### 卸载插件
+
+**Windows (PowerShell):**
+```powershell
+.\install.ps1 -Uninstall
+```
+
+**macOS / Linux (Bash):**
+```bash
+./install.sh --uninstall
+```
+
+## 本地同步与单元测试
+
+```bash
+# 1. 安装依赖
+pip install -r sync/requirements.txt pytest
+
+# 2. 运行单元测试
+python -m unittest discover -s tests -v
+
+# 3. 直接在本地工作区执行同步更新（无需克隆到临时目录或 push）
+python sync/main.py --local
+
+# 4. 模拟 Cloud Run 远端同步测试 (Dry Run 模式)
+export GITHUB_TOKEN=ghp_your_token
+export DRY_RUN=true
+python sync/main.py
+```
+
+## Cloud Run 首次部署与更新
 
 ### 1. 创建 GitHub PAT
 
@@ -64,7 +108,7 @@ echo -n "ghp_your_token_here" | \
   gcloud secrets create github-pat --data-file=-
 ```
 
-### 3. 部署
+### 3. 部署 / 更新镜像
 
 ```bash
 chmod +x deploy.sh
@@ -77,70 +121,28 @@ chmod +x deploy.sh
 gcloud run jobs execute skill-sync-job --region us-west1
 ```
 
-## 本地测试与单元测试
-
-```bash
-# 1. 安装依赖
-pip install -r sync/requirements.txt pytest
-
-# 2. 运行单元测试
-python3 -m unittest discover -s tests -v
-
-# 3. 运行本地同步测试 (Dry Run 模式)
-export GITHUB_TOKEN=ghp_your_token
-export DRY_RUN=true
-python sync/main.py
-```
-
-## 作为 Antigravity 插件安装使用
-
-本仓库符合 Antigravity 插件规范（包含了 `plugin.json`）。你可以将其安装为 Antigravity 的本地插件，使 Antigravity 能自动识别并加载 `skills/` 目录下的所有 Agent Skill：
-
-### 安装插件
-
-**macOS / Linux (Bash):**
-```bash
-chmod +x install.sh
-./install.sh
-```
-
-**Windows (PowerShell):**
-```powershell
-.\install.ps1
-```
-
-### 卸载插件
-
-**macOS / Linux (Bash):**
-```bash
-./install.sh --uninstall
-```
-
-**Windows (PowerShell):**
-```powershell
-.\install.ps1 -Uninstall
-```
-
 ## 目录结构
 
-```
+```text
 ├── .github/workflows/ # GitHub Actions CI 配置
 │   └── ci.yml
-├── plugin.json        # Antigravity 插件配置文件
+├── assets/
+│   └── logo.svg       # Antigravity 2.0 插件高清矢量图标
+├── plugin.json        # Antigravity 2.0 插件清单 (Manifest)
 ├── install.sh         # Antigravity 插件安装/卸载脚本 (macOS/Linux)
 ├── install.ps1        # Antigravity 插件安装/卸载脚本 (Windows PowerShell)
-├── sources.yaml       # skill 来源配置
-├── skills/            # 同步下来的 skill（自动维护）
-│   ├── anthropics/    # 完整同步按来源分类
-│   │   ├── claude-api/
-│   │   ├── frontend-design/
-│   │   └── ...
-│   ├── claude-api -> anthropics/claude-api # 常用 skill 符号链接 (根层级以便 Antigravity 插件自动识别)
-│   └── pptx -> anthropics/pptx
-├── sync/              # 同步服务代码
+├── sources.yaml       # Skill 来源与过滤配置
+├── skills/            # 纯净平铺的真实 Skill 目录（自动维护）
+│   ├── claude-api/
+│   │   └── SKILL.md
+│   ├── frontend-design/
+│   │   └── SKILL.md
+│   └── ...
+├── sync/              # 同步服务核心代码
 │   ├── main.py
 │   ├── syncer.py
 │   ├── git_ops.py
+│   ├── sources.default.yaml
 │   └── requirements.txt
 ├── tests/             # 自动化单元测试套件
 │   └── test_syncer.py
@@ -148,5 +150,3 @@ chmod +x install.sh
 ├── deploy.sh
 └── spec.md
 ```
-
-

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Note: Antigravity Language Server (Go os.ReadDir) requires a real directory (entry.IsDir() == true)
+# and ignores top-level symlinks in ~/.gemini/config/plugins/. This script copies the clean plugin bundle.
 set -e
 
 PLUGIN_NAME="myskills"
@@ -20,22 +22,31 @@ function print_info() {
   echo -e "[INFO] $1"
 }
 
-function print_warning() {
-  echo -e "${YELLOW}[WARNING]${NC} $1"
+function enable_plugin_in_antigravity() {
+  if [ -n "${ANTIGRAVITY_CSRF_TOKEN:-}" ]; then
+    local addr="${ANTIGRAVITY_LS_ADDRESS:-localhost:5387}"
+    curl -sS -X POST \
+      "http://${addr}/exa.language_server_pb.LanguageServerService/JetboxWriteState" \
+      -H "Content-Type: application/json" \
+      -H "x-codeium-csrf-token: ${ANTIGRAVITY_CSRF_TOKEN}" \
+      -d "{\"userConfig\":{\"plugins\":{\"${PLUGIN_NAME}\":{\"enabled\":true}}}}" >/dev/null 2>&1 || true
+  fi
 }
 
-function print_error() {
-  echo -e "${RED}[ERROR]${NC} $1"
+function remove_target() {
+  if [ -L "${TARGET_DIR}" ]; then
+    rm -f "${TARGET_DIR}"
+  elif [ -d "${TARGET_DIR}" ]; then
+    rm -rf "${TARGET_DIR}"
+  fi
 }
 
 if [[ "$1" == "--uninstall" || "$1" == "-u" ]]; then
   print_info "Uninstalling Antigravity plugin '${PLUGIN_NAME}'..."
-  if [ -L "${TARGET_DIR}" ]; then
-    rm "${TARGET_DIR}"
-    print_success "Symlink removed from ${TARGET_DIR}."
-  elif [ -d "${TARGET_DIR}" ]; then
-    print_warning "${TARGET_DIR} is a directory (not a symlink). Please manually inspect and remove it if appropriate."
-    exit 1
+  enable_plugin_in_antigravity
+  if [ -L "${TARGET_DIR}" ] || [ -d "${TARGET_DIR}" ]; then
+    remove_target
+    print_success "Removed plugin from ${TARGET_DIR}."
   else
     print_info "Plugin is not installed at ${TARGET_DIR}."
   fi
@@ -43,31 +54,21 @@ if [[ "$1" == "--uninstall" || "$1" == "-u" ]]; then
   exit 0
 fi
 
-print_info "Installing '${PLUGIN_NAME}' as an Antigravity plugin..."
+print_info "Installing '${PLUGIN_NAME}' as an Antigravity 2.0 plugin..."
 
-# Ensure target plugin directory parent exists
-if [ ! -d "${PLUGINS_DIR}" ]; then
-  print_info "Creating plugins directory at ${PLUGINS_DIR}..."
-  mkdir -p "${PLUGINS_DIR}"
+mkdir -p "${PLUGINS_DIR}"
+
+if [ -L "${TARGET_DIR}" ] || [ -d "${TARGET_DIR}" ]; then
+  print_info "Updating existing plugin installation at ${TARGET_DIR}..."
+  remove_target
 fi
 
-# Check if existing target exists
-if [ -L "${TARGET_DIR}" ]; then
-  CURRENT_LINK="$(readlink "${TARGET_DIR}")"
-  if [ "${CURRENT_LINK}" == "${SCRIPT_DIR}" ]; then
-    print_success "Plugin '${PLUGIN_NAME}' is already linked to ${SCRIPT_DIR}."
-    exit 0
-  else
-    print_warning "Updating existing symlink from ${CURRENT_LINK} to ${SCRIPT_DIR}..."
-    rm "${TARGET_DIR}"
-  fi
-elif [ -d "${TARGET_DIR}" ]; then
-  print_error "Target location ${TARGET_DIR} exists as a directory. Cannot overwrite with symlink."
-  exit 1
-fi
+mkdir -p "${TARGET_DIR}"
+cp "${SCRIPT_DIR}/plugin.json" "${TARGET_DIR}/"
+[ -f "${SCRIPT_DIR}/README.md" ] && cp "${SCRIPT_DIR}/README.md" "${TARGET_DIR}/"
+[ -d "${SCRIPT_DIR}/assets" ] && cp -R "${SCRIPT_DIR}/assets" "${TARGET_DIR}/assets"
+[ -d "${SCRIPT_DIR}/skills" ] && cp -R "${SCRIPT_DIR}/skills" "${TARGET_DIR}/skills"
 
-# Create symlink
-ln -s "${SCRIPT_DIR}" "${TARGET_DIR}"
-print_success "Successfully installed '${PLUGIN_NAME}' plugin!"
-print_info "Symlink created: ${TARGET_DIR} -> ${SCRIPT_DIR}"
-print_info "Antigravity will now automatically discover skills in this plugin."
+enable_plugin_in_antigravity
+print_success "Successfully installed '${PLUGIN_NAME}' plugin to ${TARGET_DIR}!"
+print_info "Manage plugin at: customization://${PLUGIN_NAME}"
