@@ -1,6 +1,7 @@
 """
 syncer.py - 核心同步逻辑
 从 GitHub 仓库下载 skill 文件并直接平铺同步到本地 skills/<skill-name>/ 目录，
+支持多技能集合仓库 (include/exclude) 与单技能独立仓库 (single)，
 确保 100% 符合 Antigravity 2.0 插件一级目录自动发现规范且跨平台零符号链接依赖。
 """
 
@@ -8,6 +9,7 @@ import io
 import os
 import logging
 import shutil
+import subprocess
 import tarfile
 import requests
 from requests.adapters import HTTPAdapter
@@ -17,9 +19,39 @@ logger = logging.getLogger(__name__)
 
 GITHUB_API = "https://api.github.com"
 
+IGNORED_ROOT_ENTRIES = {".git", ".github", ".gitignore", ".dockerignore"}
+
+
+def resolve_github_token(token: str | None = None) -> str | None:
+    """
+    优先使用传入的 token；若为空（如本地运行未导出 GITHUB_TOKEN），
+    尝试通过 git credential fill 获取本地 Git 凭据以支持私有仓库访问。
+    """
+    if token:
+        return token
+    try:
+        res = subprocess.run(
+            ["git", "credential", "fill"],
+            input="protocol=https\nhost=github.com\n\n",
+            text=True,
+            capture_output=True,
+            timeout=5,
+            check=False,
+        )
+        if res.returncode == 0 and res.stdout:
+            for line in res.stdout.splitlines():
+                if line.startswith("password="):
+                    cred_token = line.split("=", 1)[1].strip()
+                    if cred_token:
+                        return cred_token
+    except Exception:
+        pass
+    return None
+
 
 def get_http_session(token: str | None = None) -> requests.Session:
     """创建配置了 Retry 策略和 Auth Header 的 requests.Session"""
+    resolved_token = resolve_github_token(token)
     session = requests.Session()
     retries = Retry(
         total=3,
@@ -31,8 +63,8 @@ def get_http_session(token: str | None = None) -> requests.Session:
     session.mount("https://", adapter)
     session.mount("http://", adapter)
     session.headers.update({"Accept": "application/vnd.github.v3+json"})
-    if token:
-        session.headers["Authorization"] = f"token {token}"
+    if resolved_token:
+        session.headers["Authorization"] = f"token {resolved_token}"
     return session
 
 
@@ -50,7 +82,7 @@ def list_skills(
     branch = source.get("branch", "main")
     path = source.get("path", "")
 
-    url = f"{GITHUB_API}/repos/{repo}/contents/{path}"
+    url = f"{GITHUB_API}/repos/{repo}/contents/{path}".rstrip("/")
     params = {"ref": branch}
     resp = session.get(url, params=params, timeout=30)
     resp.raise_for_status()
@@ -88,6 +120,59 @@ def _remove_path(target_path: str) -> None:
         os.remove(target_path)
     elif os.path.isdir(target_path):
         shutil.rmtree(target_path)
+
+
+def extract_single_skill_from_tarball(
+    tarball_bytes: bytes,
+    remote_path: str,
+    skill_name: str,
+    skills_dir: str,
+) -> None:
+    """
+    从单技能仓库（SKILL.md 位于仓库根目录或指定子目录）的 Tarball 字节流中提取整个 skill 到 skills_dir/<skill_name>/
+    """
+    os.makedirs(skills_dir, exist_ok=True)
+
+    with tarfile.open(fileobj=io.BytesIO(tarball_bytes), mode="r:gz") as tar:
+        members = tar.getmembers()
+        if not members:
+            return
+
+        first_member = members[0].name
+        top_prefix = first_member.split("/")[0] + "/"
+
+        skill_prefix = top_prefix
+        clean_path = remote_path.strip("/")
+        if clean_path:
+            skill_prefix += clean_path + "/"
+
+        local_skill_path = os.path.join(skills_dir, skill_name)
+        if os.path.exists(local_skill_path) or os.path.islink(local_skill_path):
+            _remove_path(local_skill_path)
+        os.makedirs(local_skill_path, exist_ok=True)
+
+        extracted_count = 0
+        for member in members:
+            if member.name.startswith(skill_prefix) and member.isfile():
+                rel_path = member.name[len(skill_prefix) :]
+                if not rel_path:
+                    continue
+                first_seg = rel_path.split("/")[0]
+                if first_seg in IGNORED_ROOT_ENTRIES:
+                    continue
+                norm_rel = os.path.normpath(rel_path)
+                if norm_rel.startswith("..") or os.path.isabs(norm_rel):
+                    continue
+                target_file = os.path.join(local_skill_path, norm_rel)
+                os.makedirs(os.path.dirname(target_file), exist_ok=True)
+
+                extracted_file = tar.extractfile(member)
+                if extracted_file:
+                    with open(target_file, "wb") as f:
+                        shutil.copyfileobj(extracted_file, f)
+                    extracted_count += 1
+
+        logger.info("  解压单仓库 skill: %s (%d 个文件)", skill_name, extracted_count)
 
 
 def extract_skills_from_tarball(
@@ -161,9 +246,24 @@ def sync_source(
     repo = source["repo"]
     branch = source.get("branch", "main")
     path = source.get("path", "")
+    mode = source.get("mode", "exclude")
 
     logger.info("同步来源 [%s] 从 %s ...", name, repo)
 
+    tarball_url = f"{GITHUB_API}/repos/{repo}/tarball/{branch}"
+
+    # 单技能仓库模式：仓库根目录（或指定 path）直接就是单个 Skill
+    if mode == "single":
+        skill_name = source.get("skill", name)
+        logger.info("  单技能仓库模式 -> %s", skill_name)
+        logger.info("  正在下载仓库归档文件 (%s)...", tarball_url)
+        resp = session.get(tarball_url, timeout=60, allow_redirects=True)
+        resp.raise_for_status()
+        extract_single_skill_from_tarball(resp.content, path, skill_name, skills_dir)
+        logger.info("来源 [%s] 同步完成 ✓", name)
+        return [skill_name]
+
+    # 多技能集合仓库模式
     # 1. 获取远端 skill 列表
     all_skills = list_skills(source, token, session=session)
     logger.info("  远端共 %d 个 skill", len(all_skills))
@@ -179,7 +279,6 @@ def sync_source(
     os.makedirs(skills_dir, exist_ok=True)
 
     # 3. 一次性下载 Tarball 并解压提取 wanted_skills 到 skills_dir/<skill_name>/
-    tarball_url = f"{GITHUB_API}/repos/{repo}/tarball/{branch}"
     logger.info("  正在下载仓库归档文件 (%s)...", tarball_url)
     resp = session.get(tarball_url, timeout=60, allow_redirects=True)
     resp.raise_for_status()

@@ -60,10 +60,10 @@ def load_config(repo_dir: str) -> dict:
     return config
 
 
-def run_sync_in_dir(repo_dir: str, token: str | None = None) -> set[str]:
+def run_sync_in_dir(repo_dir: str, token: str | None = None) -> tuple[set[str], bool]:
     """
     在指定仓库目录内执行全量同步与清理
-    返回本次激活的全部 skill 名称集合
+    返回 (本次激活的全部 skill 名称集合, 是否全部来源同步成功)
     """
     config = load_config(repo_dir)
     sources = config["sources"]
@@ -84,13 +84,13 @@ def run_sync_in_dir(repo_dir: str, token: str | None = None) -> set[str]:
         except Exception:
             all_succeeded = False
             logger.exception(
-                "同步来源 [%s] 失败，跳过继续", source.get("name", "unknown")
+                "同步来源 [%s] 失败", source.get("name", "unknown")
             )
 
     if all_succeeded:
         cleanup_skills_dir(skills_dir, active_skills)
     else:
-        logger.warning("部分来源同步失败，跳过全量过期清理以避免误删现有 skill")
+        logger.error("存在同步失败的来源，跳过全量过期清理以避免误删现有 skill")
 
     # 清理旧版遗留的根目录 skills.json（如果存在）
     legacy_skills_json = os.path.join(repo_dir, "skills.json")
@@ -99,7 +99,7 @@ def run_sync_in_dir(repo_dir: str, token: str | None = None) -> set[str]:
         logger.info("已清理废弃的根目录 skills.json")
 
     logger.info("当前生效 skill 总数: %d", len(active_skills))
-    return active_skills
+    return active_skills, all_succeeded
 
 
 def main():
@@ -127,8 +127,11 @@ def main():
         local_repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         logger.info("运行模式: 本地仓库直连 (%s)", local_repo_dir)
         logger.info("=" * 60)
-        run_sync_in_dir(local_repo_dir, token)
+        _, all_ok = run_sync_in_dir(local_repo_dir, token)
         logger.info("=" * 60)
+        if not all_ok:
+            logger.error("本地 Skill Sync 存在失败项 ✗")
+            sys.exit(1)
         logger.info("本地 Skill Sync 运行结束 ✓")
         logger.info("=" * 60)
         return
@@ -140,13 +143,14 @@ def main():
     # 创建临时工作目录
     work_dir = tempfile.mkdtemp(prefix="skill-sync-")
     logger.info("工作目录: %s", work_dir)
+    all_ok = True
 
     try:
         # 1. Clone 目标仓库
         clone_repo(repo_url, work_dir, token)
 
         # 2. 执行同步与清理
-        run_sync_in_dir(work_dir, token)
+        _, all_ok = run_sync_in_dir(work_dir, token)
 
         # 3. 检查变更并推送
         if has_changes(work_dir):
@@ -169,6 +173,9 @@ def main():
         logger.info("清理完成，工作目录已删除。")
 
     logger.info("=" * 60)
+    if not all_ok:
+        logger.error("Skill Sync 存在失败来源，以非零状态码退出 ✗")
+        sys.exit(1)
     logger.info("Skill Sync 运行结束")
     logger.info("=" * 60)
 

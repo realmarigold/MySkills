@@ -4,6 +4,7 @@
 #
 # mode: include — 只获取 include 列表中指定的精选高价值 skill
 # mode: exclude — 获取该来源下所有 skill，排除 exclude 列表中的项
+# mode: single  — 独立单技能仓库（仓库根目录或指定 path 直接包含 SKILL.md）
 
 sources:
   - name: anthropics
@@ -30,3 +31,8 @@ sources:
     include:
       - diagnosing-bugs
       - tdd
+
+  - name: context-hygiene
+    repo: realmarigold/context-hygiene
+    branch: main
+    mode: single

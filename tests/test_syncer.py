@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "sync"))
 from syncer import (
     filter_skills,
     extract_skills_from_tarball,
+    extract_single_skill_from_tarball,
     cleanup_skills_dir,
 )
 
@@ -71,6 +72,39 @@ class TestSyncer(unittest.TestCase):
             self.assertTrue(os.path.isfile(target_file))
             with open(target_file, "rb") as f:
                 self.assertEqual(f.read(), data)
+
+    def test_extract_single_skill_from_tarball(self):
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+            skill_data = b"---\nname: context-hygiene\ndescription: clean code\n---\n"
+            ti1 = tarfile.TarInfo("realmarigold-context-hygiene-abc/SKILL.md")
+            ti1.size = len(skill_data)
+            tar.addfile(ti1, io.BytesIO(skill_data))
+
+            script_data = b"print('scan')"
+            ti2 = tarfile.TarInfo("realmarigold-context-hygiene-abc/scripts/hygiene_scan.py")
+            ti2.size = len(script_data)
+            tar.addfile(ti2, io.BytesIO(script_data))
+
+            ignored_data = b"ignored"
+            ti3 = tarfile.TarInfo("realmarigold-context-hygiene-abc/.github/workflows/ci.yml")
+            ti3.size = len(ignored_data)
+            tar.addfile(ti3, io.BytesIO(ignored_data))
+
+        tarball_bytes = buf.getvalue()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            skills_dir = os.path.join(tmpdir, "skills")
+            extract_single_skill_from_tarball(
+                tarball_bytes=tarball_bytes,
+                remote_path="",
+                skill_name="context-hygiene",
+                skills_dir=skills_dir,
+            )
+
+            self.assertTrue(os.path.isfile(os.path.join(skills_dir, "context-hygiene", "SKILL.md")))
+            self.assertTrue(os.path.isfile(os.path.join(skills_dir, "context-hygiene", "scripts", "hygiene_scan.py")))
+            self.assertFalse(os.path.exists(os.path.join(skills_dir, "context-hygiene", ".github")))
 
     def test_cleanup_skills_dir(self):
         with tempfile.TemporaryDirectory() as tmpdir:
